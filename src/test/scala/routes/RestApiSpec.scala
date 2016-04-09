@@ -1,68 +1,71 @@
 package routes
 
 import java.util.UUID
+import java.util.UUID.randomUUID
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import akka.http.scaladsl.server.Directives._
+import models.ToDo
 import org.scalatest.{Matchers, WordSpec}
+import service.ToDoService
+
+import scala.util.Try
 
 class RestApiSpec extends WordSpec with Matchers with ScalatestRouteTest {
 
-  val route =
-    post {
-      path("todo") {
-        complete {
-          (StatusCodes.NotFound, "bohoo")
-        }
-      }
-    } ~
-      get {
-        path("todo" / JavaUUID) { (uuid: UUID) =>
-          complete(StatusCodes.BadRequest, "bohoo")
-        }
-      }
+  val idOfExistingToDo = randomUUID()
+  val router: RestApi = new RestApi(new ToDoService {
+    override def update(todo: ToDo): Try[ToDo] = ???
+
+    override def getById(id: UUID): Option[ToDo] = ???
+
+    override def create(todo: ToDo): Try[ToDo] = ???
+
+    override def getAll: List[ToDo] = ???
+  })
 
   "POST /todo" should {
 
     "return a 400 if the body is not a valid ToDo request" in {
-      Post("/todo", "") ~> route ~> check {
+      Post("/todo", "") ~> router.routes ~> check {
         status shouldBe StatusCodes.BadRequest
       }
     }
 
     "return 201 if ToDo was created" in {
-      Post("/todo", "") ~> route ~> check {
+      Post("/todo", "") ~> router.routes ~> check {
         status shouldBe StatusCodes.Created
       }
     }
+
   }
 
   "GET /todo" should {
 
     "return a 200 and the list of ToDo's" in {
-      Get("/todo", "") ~> route ~> check {
+      Get("/todo", "") ~> router.routes ~> check {
         status shouldBe StatusCodes.OK
       }
     }
+
   }
 
   "GET /todo/:id" should {
 
     "reject a request if ID is not an UUID" in {
-      Get("/todo/1", "") ~> route ~> check {
+      Get("/todo/1", "") ~> router.routes ~> check {
         rejections.size shouldBe 0
       }
     }
 
     "return 404 if ToDo doesn't exist" in {
-      Get("/todo/1", "") ~> route ~> check {
+      Get(s"/todo/$randomUUID", "") ~> router.routes ~> check {
         status shouldBe StatusCodes.NotFound
       }
     }
 
     "return 200 and the ToDo, if it exists" in {
-      Get("/todo/1", "") ~> route ~> check {
+      Get(s"/todo/$idOfExistingToDo", "") ~> router.routes ~> check {
         status shouldBe StatusCodes.OK
       }
     }
@@ -72,14 +75,30 @@ class RestApiSpec extends WordSpec with Matchers with ScalatestRouteTest {
   "PUT /todo/:id" should {
 
     "return 404 if ToDo doesn't exist" in {
-      Put("/todo/1", "") ~> route ~> check {
+      Put(s"/todo/$randomUUID", "") ~> router.routes ~> check {
         status shouldBe StatusCodes.NotFound
       }
     }
 
     "return 200 and the ToDo, if it exists" in {
-      Get("/todo/1", "") ~> route ~> check {
+      Put(s"/todo/$idOfExistingToDo", "") ~> router.routes ~> check {
         status shouldBe StatusCodes.OK
+      }
+    }
+
+  }
+
+  "DELETE /todo/:id" should {
+
+    "return 404 if ToDo doesn't exist" in {
+      Delete(s"/todo/$randomUUID", "") ~> router.routes ~> check {
+        status shouldBe StatusCodes.NotFound
+      }
+    }
+
+    "return 204 and the ToDo, if it exists" in {
+      Delete(s"/todo/$idOfExistingToDo", "") ~> router.routes ~> check {
+        status shouldBe StatusCodes.NoContent
       }
     }
 

@@ -1,9 +1,6 @@
 package models
 
-import java.time.ZonedDateTime
-import java.util.UUID
-
-case class ToDo(id: UUID,
+case class ToDo(id: String,
                 title: String,
                 description: String,
-                dueDate: ZonedDateTime)
+                dueDate: String)

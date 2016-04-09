@@ -8,7 +8,6 @@ libraryDependencies ++= {
   val akkaV = "2.4.3"
   Seq(
     "io.getquill" %% "quill-cassandra" % "0.5.0",
-
     "io.circe" %% "circe-core" % "0.4.0-RC1",
     "io.circe" %% "circe-generic" % "0.4.0-RC1",
     "io.circe" %% "circe-parser" % "0.4.0-RC1",
@@ -25,8 +24,3 @@ libraryDependencies ++= {
     "org.scalatest" %% "scalatest" % "2.2.4" % "test"
   )
 }
-
-
-// Uncomment to use Akka
-//libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.3.11"
-

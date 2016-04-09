@@ -1,8 +1,12 @@
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
-import routes.RestApi
-import service.ToDoServiceImpl
 import utils.{ActorModuleImpl, ConfigurationModuleImpl}
+import db.repositories.ToDoRepositoryImpl
+import io.getquill._
+import io.getquill.naming.Literal
+import io.getquill.sources.cassandra.CassandraAsyncSource
+import routes.RestApi
+
 
 object Main extends App {
   // configuring modules for application, cake pattern for DI
@@ -12,8 +16,9 @@ object Main extends App {
   implicit val ec = modules.system.dispatcher
 
   //modules.suppliersDal.createTable()
-  val service = ToDoServiceImpl(model)
-  val bindingFuture = Http().bindAndHandle(service, "localhost", 8080)
+  val db = source(new CassandraAsyncSourceConfig[Literal]("cassandra"))
+  val service = new RestApi(new ToDoRepositoryImpl(db))
+  val bindingFuture = Http().bindAndHandle(service.routes, "localhost", 8080)
 
   println(s"Server online at http://localhost:8080/")
 

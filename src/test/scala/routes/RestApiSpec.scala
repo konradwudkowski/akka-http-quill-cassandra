@@ -5,23 +5,26 @@ import java.util.UUID.randomUUID
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import db.repositories.{ToDoRepository, ToDoRepositoryImpl}
 import models.ToDo
 import org.scalatest.{Matchers, WordSpec}
-import service.ToDoService
 
+import scala.concurrent.Future
 import scala.util.Try
 
 class RestApiSpec extends WordSpec with Matchers with ScalatestRouteTest {
 
   val idOfExistingToDo = randomUUID()
-  val router: RestApi = new RestApi(new ToDoService {
-    override def update(todo: ToDo): Try[ToDo] = ???
+  val router: RestApi = new RestApi(new ToDoRepository {
+    override def update(todo: ToDo): Future[ToDo] = ???
 
-    override def getById(id: UUID): Option[ToDo] = ???
+    override def getById(id: String): Future[Option[ToDo]] = ???
 
-    override def create(todo: ToDo): Try[ToDo] = ???
+    override def create(todo: ToDo): Future[ToDo] = ???
 
-    override def getAll: List[ToDo] = ???
+    override def getAll: Future[List[ToDo]] = ???
+
+    override  def delete(id: String): Future[Unit] = ???
   })
 
   "POST /todo" should {

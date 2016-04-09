@@ -13,9 +13,9 @@ import io.getquill._
 
 trait ToDoRepository {
   def create(todo: ToDo): Future[ToDo]
-  def delete(id: UUID): Future[Unit]
+  def delete(id: String): Future[Unit]
   def getAll: Future[List[ToDo]]
-  def getById(id: UUID): Future[Option[ToDo]]
+  def getById(id: String): Future[Option[ToDo]]
   def update(todo: ToDo): Future[ToDo]
 }
 
@@ -25,9 +25,9 @@ class ToDoRepositoryImpl(cassandra: CassandraAsyncSource[Literal])(implicit ec: 
   override def create(todo: ToDo): Future[ToDo] =
     cassandra.run(query[ToDo].insert)(todo).map(_ => todo)
 
-  override def delete(id: UUID): Future[Unit] = {
+  override def delete(id: String): Future[Unit] = {
     val q = quote {
-      (todoId: UUID) => query[ToDo].filter(_.id == todoId).delete
+      (todoId: String) => query[ToDo].filter(_.id == todoId).delete
     }
     cassandra.run(q)(id).map(_ => ())
   }
@@ -36,9 +36,9 @@ class ToDoRepositoryImpl(cassandra: CassandraAsyncSource[Literal])(implicit ec: 
   override def update(todo: ToDo): Future[ToDo] =
     cassandra.run(query[ToDo].update)(todo).map(_ => todo)
 
-  override def getById(id: UUID): Future[Option[ToDo]] = {
+  override def getById(id: String): Future[Option[ToDo]] = {
     val q = quote {
-      (todoId: UUID) => query[ToDo].filter(_.id == todoId)
+      (todoId: String) => query[ToDo].filter(_.id == todoId)
     }
     cassandra.run(q)(id).map(_.headOption)
   }

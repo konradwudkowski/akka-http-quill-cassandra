@@ -3,41 +3,73 @@ package routes
 import java.time.ZonedDateTime
 import java.util.UUID
 
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.server.Directives._
-import models.ToDo
-import service.ToDoService
+import akka.http.scaladsl.server._
+import cats.data.Xor
+import db.repositories.ToDoRepository
+import io.getquill._
+import io.getquill.naming.SnakeCase
+import models.{ToDo, TodoParser, TodoToCreate}
 
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 import scala.util.{Failure, Success}
 
-class RestApi(service: ToDoService) {
-  val routes =
-    post {
-      path("todo") {
-        complete {
-          service.create(ToDo(UUID.randomUUID().toString, "", "", ZonedDateTime.now.toString)) match {
-            case Success(todo) => StatusCodes.Created
-            case Failure(ex) => StatusCodes.BadRequest
+class RestApi(repo: ToDoRepository)(implicit ec: ExecutionContext) {
+  import models.JsonProtocol._
+
+  private val todoPostRoute = post {
+    path("todo") {
+        entity(as[String]) { body =>
+          TodoParser.toToDo(body) match {
+            case Xor.Left(_) => complete(StatusCodes.BadRequest)
+            case Xor.Right(todo) =>
+              onComplete(repo.create(todo)) {
+                case Success(_) => complete(StatusCodes.Created)
+                case Failure(ex) => complete(StatusCodes.BadRequest)
           }
         }
       }
+    }
+  }
+
+  private val todoGetRoute = get {
+    path("todo") {
+      complete(StatusCodes.BadRequest, "bohoo")
     } ~
-      get {
-        path("todo") {
-          complete(StatusCodes.BadRequest, "bohoo")
-        } ~
-          path("todo" / JavaUUID) { (uuid: UUID) =>
-            complete(StatusCodes.BadRequest, "bohoo")
+      path("todo" / Segment) { (uuid: String) =>
+        onComplete(repo.getById(uuid)) {
+          case Success(todoOpt) => todoOpt match {
+            case Some(todo: ToDo) => complete(todo)
+            case None => complete(NotFound, s"The todo doesn't exist")
           }
-      } ~
-      put {
-        path("todo" / JavaUUID) { (uuid: UUID) =>
-          complete(StatusCodes.BadRequest, "bohoo")
-        }
-      } ~
-      delete {
-        path("todo" / JavaUUID) { (uuid: UUID) =>
-          complete(StatusCodes.BadRequest, "bohoo")
+          case Failure(ex) => complete(InternalServerError, s"An error occurred: ${ex.getMessage}")
         }
       }
+  }
+
+  private val todoPutRoute = put {
+    path("todo" / Segment) { (uuid: String) =>
+      entity(as[TodoToCreate]) { todoToUpdate =>
+        onComplete(repo.update(ToDo(uuid, todoToUpdate.title, todoToUpdate.description, todoToUpdate.dueDate))) {
+          case Success(todoOpt) => complete(StatusCodes.OK)
+          case Failure(ex) => complete(StatusCodes.BadRequest)
+        }
+      }
+    }
+  }
+
+  private val todoDeleteRoute =
+    delete {
+        path("todo" / Segment) { (uuid: String) =>
+          onComplete(repo.delete(uuid)) {
+            case Success(todo) => complete(StatusCodes.Created)
+            case Failure(ex) => complete(StatusCodes.BadRequest)
+          }
+        }
+      }
+
+  val routes: Route = todoGetRoute // ~ todoPostRoute ~ todoPutRoute ~ todoDeleteRoute
 }

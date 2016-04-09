@@ -6,4 +6,4 @@ import java.util.UUID
 case class ToDo(id: UUID,
                 title: String,
                 description: String,
-                dueDate: ZonedDateTime)
+                dueDate: String)

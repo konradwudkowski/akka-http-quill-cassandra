@@ -15,7 +15,7 @@ class RestApi(service: ToDoService) {
     post {
       path("todo") {
         complete {
-          service.create(ToDo(UUID.randomUUID(), "", "", ZonedDateTime.now)) match {
+          service.create(ToDo(UUID.randomUUID(), "", "", "")) match {
             case Success(todo) => StatusCodes.Created
             case Failure(ex) => StatusCodes.BadRequest
           }

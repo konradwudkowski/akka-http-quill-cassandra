@@ -1,19 +1,17 @@
+import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
-import utils.{ActorModuleImpl, ConfigurationModuleImpl}
 import db.repositories.ToDoRepositoryImpl
 import io.getquill._
 import io.getquill.naming.Literal
-import io.getquill.sources.cassandra.CassandraAsyncSource
 import routes.RestApi
 
 
 object Main extends App {
   // configuring modules for application, cake pattern for DI
-  val modules = new ConfigurationModuleImpl with ActorModuleImpl
-  implicit val system = modules.system
+  implicit val system = ActorSystem()
   implicit val materializer = ActorMaterializer()
-  implicit val ec = modules.system.dispatcher
+  implicit val ec = system.dispatcher
 
   //modules.suppliersDal.createTable()
   val db = source(new CassandraAsyncSourceConfig[Literal]("cassandra"))

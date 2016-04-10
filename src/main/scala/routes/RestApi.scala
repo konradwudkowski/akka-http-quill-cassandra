@@ -1,8 +1,5 @@
 package routes
 
-import java.time.ZonedDateTime
-import java.util.UUID
-
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.model.StatusCodes._
@@ -10,11 +7,9 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
 import cats.data.Xor
 import db.repositories.ToDoRepository
-import io.getquill._
-import io.getquill.naming.SnakeCase
 import models.{ToDo, TodoParser, TodoToCreate}
 
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
 class RestApi(repo: ToDoRepository)(implicit ec: ExecutionContext) {
@@ -37,7 +32,10 @@ class RestApi(repo: ToDoRepository)(implicit ec: ExecutionContext) {
 
   private val todoGetRoute = get {
     path("todo") {
-      complete(StatusCodes.BadRequest, "bohoo")
+      onComplete(repo.getAll) {
+        case Success(listOfTodos) => complete(listOfTodos)
+        case Failure(ex) => complete(InternalServerError, s"An error occurred: ${ex.getMessage}")
+      }
     } ~
       path("todo" / Segment) { (uuid: String) =>
         onComplete(repo.getById(uuid)) {
@@ -65,11 +63,11 @@ class RestApi(repo: ToDoRepository)(implicit ec: ExecutionContext) {
     delete {
         path("todo" / Segment) { (uuid: String) =>
           onComplete(repo.delete(uuid)) {
-            case Success(todo) => complete(StatusCodes.Created)
-            case Failure(ex) => complete(StatusCodes.BadRequest)
+            case Success(todo) => complete(StatusCodes.NoContent)
+            case Failure(ex) => complete(StatusCodes.InternalServerError)
           }
         }
       }
 
-  val routes: Route = todoGetRoute // ~ todoPostRoute ~ todoPutRoute ~ todoDeleteRoute
+  val routes: Route = todoGetRoute ~ todoPostRoute ~ todoPutRoute ~ todoDeleteRoute
 }
